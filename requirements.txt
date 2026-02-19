@@ -1,15 +1,35 @@
-fastapi
-uvicorn
-langchain
-langchain-openai
-langchain-core
-openai
-sendgrid
-twilio
-apscheduler
-httpx
-requests
-stripe
-python-dotenv
-vapi-python
-jinja2
+# requirements.txt
+# AI Sales Agent — All Dependencies
+# NOTE: No PyAudio / sounddevice / audio libs — Vapi handles audio in the cloud
+
+# AI Brain
+langchain==0.2.16
+langchain-openai==0.1.25
+langchain-core==0.2.41
+openai==1.45.0
+
+# Web server (webhook handler)
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# Outreach
+sendgrid==6.11.0
+twilio==9.3.3
+
+# Scheduling
+apscheduler==3.10.4
+
+# HTTP
+httpx==0.27.2
+requests==2.32.3
+
+# Payments + Contracts
+stripe==10.10.0
+
+# Utils
+python-dotenv==1.0.1
+jinja2==3.1.4
+
+# Explicitly block audio packages that cause build failures on Linux
+# (these are pulled in by some deps but not needed — Vapi is cloud-based)
+--no-binary pyaudio
