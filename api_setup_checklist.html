@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Sales Agent — API Setup Checklist</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; padding: 24px 16px; }
+
+  h1 { text-align: center; color: #a78bfa; font-size: 1.5rem; margin-bottom: 4px; }
+  .subtitle { text-align: center; color: #64748b; font-size: 0.85rem; margin-bottom: 28px; }
+
+  .progress-bar-wrap { max-width: 700px; margin: 0 auto 24px; background: #1e2130; border-radius: 99px; height: 10px; }
+  .progress-bar { height: 10px; border-radius: 99px; background: linear-gradient(90deg, #7c3aed, #a78bfa); transition: width 0.4s ease; width: 0%; }
+  .progress-label { text-align: center; font-size: 0.8rem; color: #6366f1; margin-top: 6px; margin-bottom: 20px; }
+
+  .section { max-width: 700px; margin: 0 auto 18px; }
+  .section-title {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;
+    color: #6366f1; font-weight: 700; margin-bottom: 10px; padding-left: 4px;
+  }
+
+  .card {
+    background: #1e2130; border: 1px solid #2d3148; border-radius: 12px;
+    margin-bottom: 10px; overflow: hidden; transition: border-color 0.2s;
+  }
+  .card.done { border-color: #16a34a; background: #0d1f14; }
+  .card.done .card-header { opacity: 0.7; }
+
+  .card-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; cursor: pointer;
+  }
+  .checkbox {
+    width: 22px; height: 22px; border-radius: 6px; border: 2px solid #374151;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; cursor: pointer; transition: all 0.2s; font-size: 13px;
+  }
+  .card.done .checkbox { background: #16a34a; border-color: #16a34a; color: white; }
+
+  .card-name { font-weight: 600; font-size: 0.95rem; flex: 1; }
+  .card-badge {
+    font-size: 0.68rem; padding: 3px 9px; border-radius: 20px; font-weight: 600;
+  }
+  .free { background: #052e16; color: #4ade80; }
+  .paid { background: #1e1a00; color: #fbbf24; }
+  .approval { background: #1c1535; color: #c4b5fd; }
+
+  .expand-icon { color: #4b5563; font-size: 0.8rem; transition: transform 0.2s; }
+  .card.open .expand-icon { transform: rotate(180deg); }
+
+  .card-body {
+    max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+    padding: 0 16px; border-top: 1px solid transparent;
+  }
+  .card.open .card-body {
+    max-height: 400px; padding: 14px 16px;
+    border-top-color: #2d3148;
+  }
+
+  .card-body p { font-size: 0.85rem; color: #94a3b8; line-height: 1.6; margin-bottom: 10px; }
+  .card-body ol, .card-body ul { padding-left: 18px; font-size: 0.85rem; color: #94a3b8; line-height: 1.9; }
+
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+    text-decoration: none; border: none; cursor: pointer; transition: opacity 0.2s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: #6366f1; color: white; }
+  .btn-ghost { background: #1e2130; color: #a78bfa; border: 1px solid #3730a3; }
+  .btn-done { background: #16a34a; color: white; }
+
+  .env-block {
+    background: #0f1117; border: 1px solid #2d3148; border-radius: 8px;
+    padding: 10px 14px; font-family: monospace; font-size: 0.78rem;
+    color: #4ade80; margin-top: 10px; position: relative;
+  }
+  .copy-btn {
+    position: absolute; top: 8px; right: 8px; background: #1e2130;
+    border: 1px solid #374151; color: #94a3b8; border-radius: 6px;
+    padding: 3px 8px; font-size: 0.7rem; cursor: pointer;
+  }
+  .copy-btn:hover { color: #a78bfa; }
+
+  .time-tag { font-size: 0.72rem; color: #4b5563; margin-left: 4px; }
+
+  .env-export {
+    max-width: 700px; margin: 0 auto 24px;
+    background: #1e2130; border-radius: 12px; border: 1px solid #2d3148; padding: 18px;
+  }
+  .env-export h3 { font-size: 0.9rem; color: #a78bfa; margin-bottom: 12px; }
+  #envOutput {
+    background: #0f1117; border-radius: 8px; padding: 14px;
+    font-family: monospace; font-size: 0.75rem; color: #4ade80;
+    white-space: pre; overflow-x: auto; max-height: 260px; overflow-y: auto;
+    border: 1px solid #2d3148;
+  }
+  .copy-all-btn {
+    margin-top: 10px; background: #6366f1; color: white;
+    border: none; padding: 8px 18px; border-radius: 8px; cursor: pointer;
+    font-size: 0.82rem; font-weight: 600;
+  }
+  .copy-all-btn:hover { background: #4f46e5; }
+
+  .input-row { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+  .key-input {
+    flex: 1; background: #0f1117; border: 1px solid #374151; border-radius: 8px;
+    padding: 7px 12px; color: #e2e8f0; font-size: 0.82rem; font-family: monospace;
+  }
+  .key-input:focus { outline: none; border-color: #6366f1; }
+  .key-input::placeholder { color: #374151; }
+</style>
+</head>
+<body>
+
+<h1>🔑 API Keys Setup Checklist</h1>
+<p class="subtitle">Complete each step to go live with your AI Sales Agent</p>
+
+<div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+<p class="progress-label" id="progressLabel">0 of 11 completed</p>
+
+<!-- BRAIN -->
+<div class="section">
+  <div class="section-title">🧠 AI Brain</div>
+
+  <div class="card" id="card-openai">
+    <div class="card-header" onclick="toggleCard('openai')">
+      <div class="checkbox" onclick="event.stopPropagation(); toggleDone('openai')">✓</div>
+      <div class="card-name">OpenAI API Key <span class="time-tag">~5 min</span></div>
+      <span class="card-badge paid">~$20/mo</span>
+      <span class="expand-icon">▼</span>
+    </div>
+    <div class="card-body">
+      <p>Powers the GPT-4o brain — all discovery questions, pitches, and objection handling.</p>
+      <ol>
+        <li>Go to platform.openai.com → Sign up / Log in</li>
+        <li>Click <strong>API Keys</strong> in sidebar → <strong>Create new secret key</strong></li>
+        <li>Copy the key (starts with <code>sk-</code>) — you won't see it again</li>
+        <li>Add billing: Settings → Billing → Add payment method</li>
+      </ol>
+      <div class="input-row">
+        <input class="key-input" id="val-openai" placeholder="sk-proj-..." oninput="updateEnv('OPENAI_API_KEY', this.value)" />
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://platform.openai.com/api-keys" target="_blank">🔗 Get Key</a>
+        <button class="btn btn-done" onclick="toggleDone('openai')">✓ Mark Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LEADS -->
+<div class="section">
+  <div class="section-title">📋 Lead Sourcing</div>
+
+  <div class="card" id="card-google">
+    <div class="card-header" onclick="toggleCard('google')">
+      <div class="checkbox" onclick="event.stopPropagation(); toggleDone('google')">✓</div>
+      <div class="card-name">Google Cloud API Keys <span class="time-tag">~15 min</span></div>
+      <span class="card-badge free">Free tier</span>
+      <span class="expand-icon">▼</span>
+    </div>
+    <div class="card-body">
+      <p>Used for Google Maps Places API (find local businesses) + PageSpeed API (score their websites).</p>
+      <ol>
+        <li>Go to <strong>console.cloud.google.com</strong> → Create new project</li>
+        <li>Enable: <strong>Places API</strong> + <strong>PageSpeed Insights API</strong></li>
+        <li>Go to <strong>Credentials</strong> → Create API Key</li>
+        <li>Restrict key to those 2 APIs only (security)</li>
+      </ol>
+      <div class="input-row">
+        <input class="key-input" id="val-google" placeholder="AIzaSy..." oninput="updateEnv('GOOGLE_PLACES_API_KEY', this.value); updateEnv('PAGESPEED_API_KEY', this.value)" />
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://console.cloud.google.com/apis/credentials" target="_blank">🔗 Get Key</a>
+        <button class="btn btn-done" onclick="toggleDone('google')">✓ Mark Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="card-apollo">
+    <div class="card-header" onclick="toggleCard('apollo')">
+      <div class="checkbox" onclick="event.stopPropagation(); toggleDone('apollo')">✓</div>
+      <div class="card-name">Apollo.io API Key <span class="time-tag">~5 min</span></div>
+      <span class="card-badge free">Free: 50 leads/mo</span>
+      <span class="expand-icon">▼</span>
+    </div>
+    <div class="card-body">
+      <p>Used to find verified emails + decision maker names for e-commerce companies.</p>
+      <ol>
+        <li>Go to <strong>app.apollo.io</strong> → Sign up free</li>
+        <li>Settings → Integrations → API → <strong>Create API Key</strong></li>
+        <li>Free plan: 50 email credits/mo. Basic plan ($49/mo) = 1,000 credits</li>
+      </ol>
+      <div class="input-row">
+        <input class="key-input" id="val-apollo" placeholder="apollo_..." oninput="updateEnv('APOLLO_API_KEY', this.value)" />
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://app.apollo.io/#/settings/integrations/api" target="_blank">🔗 Get Key</a>
+        <button class="btn btn-done" onclick="toggleDone('apollo')">✓ Mark Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VOICE -->
+<div class="section">
+  <div class="section-title">📞 Voice Calling</div>
+
+  <div class="card" id="card-vapi">
+    <div class="card-header" onclick="toggleCard('vapi')">
+      <div class="checkbox" onclick="event.stopPropagation(); toggleDone('vapi')">✓</div>
+      <div class="card-name">Vapi.ai — API Key + Phone Number <span class="time-tag">~20 min</span></div>
+      <span class="card-badge paid">~$0.05/min</span>
+      <span class="expand-icon">▼</span>
+    </div>
+    <div class="card-body">
+      <p>The voice AI that makes real phone calls. Sounds like a human. Handles full conversations.</p>
+      <ol>
+        <li>Go to <strong>dashboard.vapi.ai</strong> → Sign up</li>
+        <li>Settings → Developer → Copy your <strong>Private API Key</strong></li>
+        <li>Phone Numbers tab → Buy a number (India: search +91 numbers, or US works too)</li>
+        <li>Copy the Phone Number ID from the dashboard</li>
+        <li>Add $10 credit to start</li>
+      </ol>
+      <div class="input-row">
+        <input class="key-input" id="val-vapi" placeholder="vapi_..." oninput="updateEnv('VAPI_API_KEY', this.value)" />
+      </div>
+      <div class="input-row" style="margin-top:6px">
+        <input class="key-input" id="val-vapiphone" placeholder="Phone Number ID (from Vapi dashboard)" oninput="updateEnv('VAPI_PHONE_NUMBER_ID', this.value)" />
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://dashboard.vapi.ai" target="_blank">🔗 Vapi Dashboard</a>
+        <button class="btn btn-done" onclick="toggleDone('vapi')">✓ Mark Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MESSAGING -->
+<div class="section">
+  <div class="section-title">💬 Email + WhatsApp</div>
+
+  <div class="card" id="card-sendgrid">
+    <div class="card-header" onclick="toggleCard('sendgrid')">
+      <div class="checkbox" onclick="event.stopPropagation(); toggleDone('sendgrid')">✓</div>
+      <div class="card-name">SendGrid API Key <span class="time-tag">~15 min</span></div>
+      <span class="card-badge free">Free: 100/day</span>
+      <span class="expand-icon">▼</span>
+    </div>
+    <div class="card-body">
+      <p>Sends cold emails, quote emails, and follow-up sequences.</p>
+      <ol>
+        <li>Go to <strong>sendgrid.com</strong> → Sign up free</li>
+        <li>Settings → API Keys → <strong>Create API Key</strong> (Full Access)</li>
+        <li>Sender Authentication → verify your domain or email (required or emails go to spam)</li>
+        <li>Use your business email: e.g. <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="51302328303f11283e2423323e3c21303f287f323e3c">[email&#160;protected]</a></li>
+      </ol>
+      <div class="input-row">
+        <input class="key-input" id="val-sendgrid" placeholder="SG.xxx..." oninput="updateEnv('SENDGRID_API_KEY', this.value)" />
+      </div>
+      <div class="input-row" style="margin-top:6px">
+        <input class="key-input" id="val-fromemail" placeholder="your@company.com" oninput="updateEnv('SENDGRID_FROM_EMAIL', this.value)" />
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://app.sendgrid.com/settings/api_keys" target="_blank">🔗 Get Key</a>
+        <button class="btn btn-done" onclick="toggleDone('sendgrid')">✓ Mark Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="card-twilio">
+    <div class="card-header" onclick="toggleCard('twilio')">
+      <div class="checkbox" onclick="event.stopPropagation(); toggleDone('twilio')">✓</div>
+      <div class="card-name">Twilio — SMS + WhatsApp <span class="time-tag">~20 min</span></div>
+      <span class="card-badge paid">~$1/mo + usage</span>
+      <span class="expand-icon">▼</span>
+    </div>
+    <div class="card-body">
+      <p>Handles WhatsApp messages and SMS fallback to leads.</p>
+      <ol>
+        <li>Go to <strong>twilio.com</strong> → Sign up (free trial $15 credit)</li>
+        <li>Console Dashboard → copy <strong>Account SID</strong> + <strong>Auth Token</strong></li>
+        <li>Buy a phone number: Phone Numbers → Search → Buy (~$1/mo)</li>
+        <li>WhatsApp Sandbox: Messaging → Try it out → WhatsApp (for testing)</li>
+        <li>For production WhatsApp: apply for WhatsApp Business approval (3–7 days)</li>
+      </ol>
+      <div class="input-row">
+        <input class="key-input" id="val-twilio-sid" placeholder="ACxxxxxxxx (Account SID)" oninput="updateEnv('TWILIO_ACCOUNT_SID', this.value)" />
+      </div>
+      <div class="input-row" style="margin-top:6px">
+        <input class="key-input" id="val-twilio-token" placeholder="Auth Token" oninput="updateEnv('TWILIO_AUTH_TOKEN', this.value)" />
+      </div>
+      <div class="input-row" style="margin-top:6px">
+        <input class="key-input" id="val-twilio-phone" placeholder="+1XXXXXXXXXX (your Twilio number)" oninput="updateEnv('TWILIO_PHONE_NUMBER', this.value)" />
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://console.twilio.com" target="_blank">🔗 Twilio Console</a>
+        <button class="btn btn-done" onclick="toggleDone('twilio')">✓ Mark Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CRM + PAYMENTS -->
+<div class="section">
+  <div class="section-title">💼 CRM + Payments + Contracts</div>
+
+  <div class="card" id="card-hubspot">
+    <div class="card-header" onclick="toggleCard('hubspot')">
+      <div class="checkbox" onclick="event.stopPropagation(); toggleDone('hubspot')">✓</div>
+      <div class="card-name">HubSpot API Key <span class="time-tag">~10 min</span></div>
+      <span class="card-badge free">Free forever</span>
+      <span class="expand-icon">▼</span>
+    </div>
+    <div class="card-body">
+      <p>Tracks all leads, pipeline stages, and deal status. Free CRM — no credit card needed.</p>
+      <ol>
+        <li>Go to <strong>hubspot.com</strong> → Sign up free</li>
+        <li>Settings → Integrations → Private Apps → <strong>Create private app</strong></li>
+        <li>Give it scopes: crm.objects.contacts (read + write)</li>
+        <li>Copy the Access Token</li>
+      </ol>
+      <div class="input-row">
+        <input class="key-input" id="val-hubspot" placeholder="pat-na1-..." oninput="updateEnv('HUBSPOT_API_KEY', this.value)" />
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://app.hubspot.com/private-apps" target="_blank">🔗 Get Key</a>
+        <button class="btn btn-done" onclick="toggleDone('hubspot')">✓ Mark Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="card-stripe">
+    <div class="card-header" onclick="toggleCard('stripe')">
+      <div class="checkbox" onclick="event.stopPropagation(); toggleDone('stripe')">✓</div>
+      <div class="card-name">Stripe Secret Key <span class="time-tag">~10 min</span></div>
+      <span class="card-badge free">Free to set up</span>
+      <span class="expand-icon">▼</span>
+    </div>
+    <div class="card-body">
+      <p>Collects payment when a lead agrees to your package. Supports INR + subscriptions.</p>
+      <ol>
+        <li>Go to <strong>dashboard.stripe.com</strong> → Sign up</li>
+        <li>Developers → API Keys → Copy <strong>Secret key</strong> (sk_live_...)</li>
+        <li>Use test key (sk_test_...) while testing</li>
+        <li>Complete KYC to activate live payments in India</li>
+      </ol>
+      <div class="input-row">
+        <input class="key-input" id="val-stripe" placeholder="sk_live_..." oninput="updateEnv('STRIPE_SECRET_KEY', this.value)" />
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://dashboard.stripe.com/apikeys" target="_blank">🔗 Get Key</a>
+        <button class="btn btn-done" onclick="toggleDone('stripe')">✓ Mark Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="card-pandadoc">
+    <div class="card-header" onclick="toggleCard('pandadoc')">
+      <div class="checkbox" onclick="event.stopPropagation(); toggleDone('pandadoc')">✓</div>
+      <div class="card-name">PandaDoc API Key + Template <span class="time-tag">~30 min</span></div>
+      <span class="card-badge paid">$19/mo after trial</span>
+      <span class="expand-icon">▼</span>
+    </div>
+    <div class="card-body">
+      <p>Sends e-sign contracts automatically when a deal is closed.</p>
+      <ol>
+        <li>Go to <strong>app.pandadoc.com</strong> → Sign up (free 14-day trial)</li>
+        <li>Settings → API → Generate API Key</li>
+        <li>Create a contract template with fields: client_name, package_name, package_price, start_date</li>
+        <li>Copy the Template ID from the template URL</li>
+      </ol>
+      <div class="input-row">
+        <input class="key-input" id="val-pandadoc" placeholder="PandaDoc API Key" oninput="updateEnv('PANDADOC_API_KEY', this.value)" />
+      </div>
+      <div class="input-row" style="margin-top:6px">
+        <input class="key-input" id="val-pandadoc-tmpl" placeholder="Template ID" oninput="updateEnv('PANDADOC_TEMPLATE_ID', this.value)" />
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://app.pandadoc.com/a/#/settings/api-integration" target="_blank">🔗 Get Key</a>
+        <button class="btn btn-done" onclick="toggleDone('pandadoc')">✓ Mark Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ALERTS -->
+<div class="section">
+  <div class="section-title">🔔 Human Handoff Alerts</div>
+
+  <div class="card" id="card-slack">
+    <div class="card-header" onclick="toggleCard('slack')">
+      <div class="checkbox" onclick="event.stopPropagation(); toggleDone('slack')">✓</div>
+      <div class="card-name">Slack Webhook URL <span class="time-tag">~5 min</span></div>
+      <span class="card-badge free">Free</span>
+      <span class="expand-icon">▼</span>
+    </div>
+    <div class="card-body">
+      <p>Sends you a Slack alert whenever the AI needs a human to step in (complex objections, big deals, etc.).</p>
+      <ol>
+        <li>Go to <strong>api.slack.com/apps</strong> → Create New App → From Scratch</li>
+        <li>Incoming Webhooks → Activate → Add to Workspace → Choose channel (#sales-alerts)</li>
+        <li>Copy the Webhook URL</li>
+      </ol>
+      <div class="input-row">
+        <input class="key-input" id="val-slack" placeholder="https://hooks.slack.com/services/..." oninput="updateEnv('SLACK_WEBHOOK_URL', this.value)" />
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://api.slack.com/apps" target="_blank">🔗 Create Webhook</a>
+        <button class="btn btn-done" onclick="toggleDone('slack')">✓ Mark Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ENV EXPORT -->
+<div class="env-export">
+  <h3>📄 Your .env File (auto-generated as you fill in keys)</h3>
+  <div id="envOutput"># Paste this into a .env file in your project root
+# Keys will appear here as you fill them in above
+
+</div>
+  <button class="copy-all-btn" onclick="copyEnv()">📋 Copy .env to Clipboard</button>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+const envVars = {};
+const doneCards = new Set();
+const totalCards = 11; // checkbox count approximation
+
+function updateEnv(key, value) {
+  if (value.trim()) {
+    envVars[key] = value.trim();
+  } else {
+    delete envVars[key];
+  }
+  renderEnv();
+}
+
+function renderEnv() {
+  const fixed = [
+    '# AI Brain',
+    `OPENAI_API_KEY=${envVars['OPENAI_API_KEY'] || ''}`,
+    '',
+    '# Lead Sourcing',
+    `GOOGLE_PLACES_API_KEY=${envVars['GOOGLE_PLACES_API_KEY'] || ''}`,
+    `PAGESPEED_API_KEY=${envVars['PAGESPEED_API_KEY'] || ''}`,
+    `APOLLO_API_KEY=${envVars['APOLLO_API_KEY'] || ''}`,
+    '',
+    '# Voice',
+    `VAPI_API_KEY=${envVars['VAPI_API_KEY'] || ''}`,
+    `VAPI_PHONE_NUMBER_ID=${envVars['VAPI_PHONE_NUMBER_ID'] || ''}`,
+    `WEBHOOK_BASE_URL=https://your-server.com`,
+    '',
+    '# Email',
+    `SENDGRID_API_KEY=${envVars['SENDGRID_API_KEY'] || ''}`,
+    `SENDGRID_FROM_EMAIL=${envVars['SENDGRID_FROM_EMAIL'] || ''}`,
+    '',
+    '# WhatsApp / SMS',
+    `TWILIO_ACCOUNT_SID=${envVars['TWILIO_ACCOUNT_SID'] || ''}`,
+    `TWILIO_AUTH_TOKEN=${envVars['TWILIO_AUTH_TOKEN'] || ''}`,
+    `TWILIO_PHONE_NUMBER=${envVars['TWILIO_PHONE_NUMBER'] || ''}`,
+    `TWILIO_WHATSAPP_FROM=whatsapp:+14155238886`,
+    '',
+    '# CRM + Payments + Contracts',
+    `HUBSPOT_API_KEY=${envVars['HUBSPOT_API_KEY'] || ''}`,
+    `STRIPE_SECRET_KEY=${envVars['STRIPE_SECRET_KEY'] || ''}`,
+    `PANDADOC_API_KEY=${envVars['PANDADOC_API_KEY'] || ''}`,
+    `PANDADOC_TEMPLATE_ID=${envVars['PANDADOC_TEMPLATE_ID'] || ''}`,
+    '',
+    '# Alerts',
+    `SLACK_WEBHOOK_URL=${envVars['SLACK_WEBHOOK_URL'] || ''}`,
+  ];
+  document.getElementById('envOutput').textContent = fixed.join('\n');
+}
+
+function copyEnv() {
+  const text = document.getElementById('envOutput').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-all-btn');
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => btn.textContent = '📋 Copy .env to Clipboard', 2000);
+  });
+}
+
+function toggleCard(id) {
+  const card = document.getElementById('card-' + id);
+  const isOpen = card.classList.contains('open');
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('open'));
+  if (!isOpen) card.classList.add('open');
+}
+
+function toggleDone(id) {
+  const card = document.getElementById('card-' + id);
+  if (doneCards.has(id)) {
+    doneCards.delete(id);
+    card.classList.remove('done');
+    card.querySelector('.checkbox').textContent = '✓';
+    card.querySelector('.checkbox').style.background = '';
+    card.querySelector('.checkbox').style.color = '';
+  } else {
+    doneCards.add(id);
+    card.classList.add('done');
+    card.querySelector('.checkbox').textContent = '✓';
+  }
+  updateProgress();
+}
+
+function updateProgress() {
+  const total = document.querySelectorAll('.card').length;
+  const done = doneCards.size;
+  const pct = Math.round((done / t

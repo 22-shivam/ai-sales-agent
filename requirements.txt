@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+langchain
+langchain-openai
+langchain-core
+openai
+sendgrid
+twilio
+apscheduler
+httpx
+requests
+stripe
+python-dotenv
+vapi-python
+jinja2

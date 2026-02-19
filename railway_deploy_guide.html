@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deploy to Railway — Step by Step</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; padding: 24px 16px; }
+  h1 { text-align: center; color: #a78bfa; font-size: 1.5rem; margin-bottom: 4px; }
+  .subtitle { text-align: center; color: #64748b; font-size: 0.85rem; margin-bottom: 28px; }
+
+  .timeline { max-width: 720px; margin: 0 auto; position: relative; }
+  .timeline::before {
+    content: ''; position: absolute; left: 22px; top: 0; bottom: 0;
+    width: 2px; background: #2d3148;
+  }
+
+  .step { display: flex; gap: 20px; margin-bottom: 28px; position: relative; }
+  .step-dot {
+    width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 1rem; z-index: 1; cursor: pointer;
+    transition: all 0.2s; border: 2px solid transparent;
+  }
+  .step-dot.pending  { background: #1e2130; border-color: #374151; color: #6b7280; }
+  .step-dot.active   { background: #4f46e5; border-color: #818cf8; color: white; box-shadow: 0 0 0 4px rgba(99,102,241,0.2); }
+  .step-dot.done     { background: #16a34a; border-color: #4ade80; color: white; }
+
+  .step-content {
+    flex: 1; background: #1e2130; border-radius: 14px;
+    border: 1px solid #2d3148; overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .step-content.active { border-color: #4f46e5; }
+  .step-content.done   { border-color: #16a34a; opacity: 0.8; }
+
+  .step-header {
+    padding: 14px 18px; display: flex; align-items: center;
+    justify-content: space-between; cursor: pointer;
+  }
+  .step-title { font-weight: 600; font-size: 0.95rem; }
+  .step-time  { font-size: 0.72rem; color: #6b7280; }
+  .step-body  { padding: 0 18px 16px; font-size: 0.85rem; color: #94a3b8; line-height: 1.8; }
+
+  .cmd {
+    background: #0f1117; border: 1px solid #2d3148; border-radius: 8px;
+    padding: 10px 14px; font-family: monospace; font-size: 0.82rem;
+    color: #4ade80; margin: 10px 0; position: relative; cursor: pointer;
+  }
+  .cmd:hover { border-color: #4f46e5; }
+  .cmd::after { content: '📋 copy'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.7rem; color: #4b5563; font-family: sans-serif; }
+  .cmd.copied::after { content: '✅ copied!'; color: #4ade80; }
+
+  .tip { background: #1c1535; border-left: 3px solid #7c3aed; padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 10px 0; font-size: 0.82rem; color: #c4b5fd; }
+  .warn { background: #1f1500; border-left: 3px solid #f59e0b; padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 10px 0; font-size: 0.82rem; color: #fcd34d; }
+
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .btn { padding: 8px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 600; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: opacity 0.2s; }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: #4f46e5; color: white; }
+  .btn-green   { background: #16a34a; color: white; }
+  .btn-ghost   { background: #1e2130; color: #a78bfa; border: 1px solid #3730a3; }
+
+  ol { padding-left: 18px; }
+  ol li { margin-bottom: 4px; }
+  strong { color: #e2e8f0; }
+
+  .env-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.8rem; }
+  .env-table th { text-align: left; padding: 6px 10px; background: #0f1117; color: #6366f1; font-size: 0.72rem; }
+  .env-table td { padding: 6px 10px; border-top: 1px solid #2d3148; color: #94a3b8; font-family: monospace; }
+  .env-table td:first-child { color: #4ade80; }
+
+  .progress-wrap { max-width: 720px; margin: 0 auto 24px; }
+  .progress-bg { background: #1e2130; border-radius: 99px; height: 8px; }
+  .progress-fill { height: 8px; border-radius: 99px; background: linear-gradient(90deg, #4f46e5, #a78bfa); width: 0%; transition: width 0.4s; }
+  .progress-txt { text-align: center; font-size: 0.78rem; color: #6366f1; margin-top: 6px; }
+
+  .done-banner { display: none; max-width: 720px; margin: 0 auto 20px; background: #052e16; border: 1px solid #16a34a; border-radius: 12px; padding: 20px; text-align: center; }
+  .done-banner h2 { color: #4ade80; margin-bottom: 8px; }
+  .done-banner p  { color: #86efac; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<h1>🚀 Deploy to Railway</h1>
+<p class="subtitle">Follow these steps in order — your AI Sales Agent will be live in ~30 minutes</p>
+
+<div class="progress-wrap">
+  <div class="progress-bg"><div class="progress-fill" id="prog"></div></div>
+  <div class="progress-txt" id="progTxt">Step 0 of 7 complete</div>
+</div>
+
+<div class="done-banner" id="doneBanner">
+  <h2>🎉 Your AI Sales Agent is LIVE!</h2>
+  <p>The agent is now running 24/7 on Railway, finding leads and making calls automatically.</p>
+</div>
+
+<div class="timeline">
+
+  <!-- STEP 1 -->
+  <div class="step" id="s1">
+    <div class="step-dot active" onclick="markDone(1)">1</div>
+    <div class="step-content active">
+      <div class="step-header" onclick="markDone(1)">
+        <span class="step-title">📁 Set up your project folder</span>
+        <span class="step-time">~5 min</span>
+      </div>
+      <div class="step-body">
+        <p>Create a folder on your computer and put all 6 files inside it:</p>
+        <div class="cmd" onclick="copyCmd(this)">mkdir ai-sales-agent && cd ai-sales-agent</div>
+        <p>Your folder should have these files:</p>
+        <div style="background:#0f1117;border-radius:8px;padding:12px;margin:10px 0;font-family:monospace;font-size:0.8rem;color:#4ade80;line-height:2">
+          ai-sales-agent/<br>
+          ├── main.py<br>
+          ├── module1_lead_sourcing.py<br>
+          ├── module2_agent_brain.py<br>
+          ├── module3_voice_agent.py<br>
+          ├── module4_outreach.py<br>
+          ├── module5_orchestrator.py<br>
+          ├── requirements.txt<br>
+          ├── Procfile<br>
+          ├── railway.toml<br>
+          └── .env
+        </div>
+        <p>Create a <strong>.env</strong> file and paste all your API keys in it (from the checklist).</p>
+        <div class="tip">💡 All these files were generated for you — just download them from the previous step.</div>
+        <div class="btn-row">
+          <button class="btn btn-green" onclick="markDone(1)">✓ Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step" id="s2">
+    <div class="step-dot pending" onclick="markDone(2)">2</div>
+    <div class="step-content">
+      <div class="step-header" onclick="markDone(2)">
+        <span class="step-title">🐙 Push to GitHub</span>
+        <span class="step-time">~5 min</span>
+      </div>
+      <div class="step-body">
+        <p>Railway deploys from GitHub. Create a repo and push your code.</p>
+        <ol>
+          <li>Go to <strong>github.com</strong> → New repository → name it <code>ai-sales-agent</code></li>
+          <li>Make it <strong>Private</strong> (your API keys will be in .env — keep private)</li>
+          <li>Run these commands in your folder:</li>
+        </ol>
+        <div class="cmd" onclick="copyCmd(this)">git init</div>
+        <div class="cmd" onclick="copyCmd(this)">echo ".env" >> .gitignore</div>
+        <div class="cmd" onclick="copyCmd(this)">git add .</div>
+        <div class="cmd" onclick="copyCmd(this)">git commit -m "Initial AI Sales Agent"</div>
+        <div class="cmd" onclick="copyCmd(this)">git remote add origin https://github.com/YOUR_USERNAME/ai-sales-agent.git</div>
+        <div class="cmd" onclick="copyCmd(this)">git push -u origin main</div>
+        <div class="warn">⚠️ Never commit your .env file — it has secret keys. The .gitignore above prevents this.</div>
+        <div class="btn-row">
+          <a class="btn btn-primary" href="https://github.com/new" target="_blank">🔗 Create GitHub Repo</a>
+          <button class="btn btn-green" onclick="markDone(2)">✓ Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step" id="s3">
+    <div class="step-dot pending" onclick="markDone(3)">3</div>
+    <div class="step-content">
+      <div class="step-header" onclick="markDone(3)">
+        <span class="step-title">🚂 Create Railway Project</span>
+        <span class="step-time">~5 min</span>
+      </div>
+      <div class="step-body">
+        <ol>
+          <li>Go to <strong>railway.app</strong> → Sign up with GitHub</li>
+          <li>Click <strong>New Project</strong></li>
+          <li>Choose <strong>Deploy from GitHub repo</strong></li>
+          <li>Select your <code>ai-sales-agent</code> repo</li>
+          <li>Railway will auto-detect Python and start building</li>
+        </ol>
+        <div class="tip">💡 Railway gives you $5 free credit/month — enough for ~500 hrs. That's plenty to start.</div>
+        <div class="btn-row">
+          <a class="btn btn-primary" href="https://railway.app/new" target="_blank">🔗 Create Railway Project</a>
+          <button class="btn btn-green" onclick="markDone(3)">✓ Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step" id="s4">
+    <div class="step-dot pending" onclick="markDone(4)">4</div>
+    <div class="step-content">
+      <div class="step-header" onclick="markDone(4)">
+        <span class="step-title">🔑 Add Environment Variables to Railway</span>
+        <span class="step-time">~10 min</span>
+      </div>
+      <div class="step-body">
+        <p>Railway needs your API keys. Add them directly in the dashboard — <strong>do NOT upload your .env file.</strong></p>
+        <ol>
+          <li>In Railway → your project → <strong>Variables</strong> tab</li>
+          <li>Click <strong>Raw Editor</strong></li>
+          <li>Paste the entire contents of your .env file</li>
+          <li>Click <strong>Update Variables</strong></li>
+        </ol>
+        <table class="env-table">
+          <tr><th>Key</th><th>Where to get it</th></tr>
+          <tr><td>OPENAI_API_KEY</td><td>platform.openai.com</td></tr>
+          <tr><td>VAPI_API_KEY</td><td>dashboard.vapi.ai</td></tr>
+          <tr><td>SENDGRID_API_KEY</td><td>app.sendgrid.com</td></tr>
+          <tr><td>TWILIO_ACCOUNT_SID</td><td>console.twilio.com</td></tr>
+          <tr><td>HUBSPOT_API_KEY</td><td>app.hubspot.com</td></tr>
+          <tr><td>STRIPE_SECRET_KEY</td><td>dashboard.stripe.com</td></tr>
+          <tr><td>WEBHOOK_BASE_URL</td><td>Your Railway URL (get in next step)</td></tr>
+        </table>
+        <div class="tip">💡 After you get your Railway URL in Step 5, come back and add WEBHOOK_BASE_URL.</div>
+        <div class="btn-row">
+          <button class="btn btn-green" onclick="markDone(4)">✓ Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step" id="s5">
+    <div class="step-dot pending" onclick="markDone(5)">5</div>
+    <div class="step-content">
+      <div class="step-header" onclick="markDone(5)">
+        <span class="step-title">🌐 Get Your Live URL + Set Webhooks</span>
+        <span class="step-time">~5 min</span>
+      </div>
+      <div class="step-body">
+        <p>Once deployed, Railway gives you a public URL. You need this for Vapi + Twilio.</p>
+        <ol>
+          <li>In Railway → your project → <strong>Settings</strong> → <strong>Generate Domain</strong></li>
+          <li>You'll get something like: <code>https://ai-sales-agent-production.up.railway.app</code></li>
+          <li>Copy it and add it as <strong>WEBHOOK_BASE_URL</strong> in Variables</li>
+        </ol>
+        <p style="margin-top:12px"><strong>Set Vapi webhook:</strong></p>
+        <ol>
+          <li>Vapi Dashboard → Assistants → your assistant → Server URL</li>
+          <li>Set to: <code>https://YOUR-URL.railway.app/vapi/webhook</code></li>
+        </ol>
+        <p style="margin-top:12px"><strong>Set Twilio WhatsApp webhook:</strong></p>
+        <ol>
+          <li>Twilio Console → Messaging → WhatsApp Sandbox → "When a message comes in"</li>
+          <li>Set to: <code>https://YOUR-URL.railway.app/twilio/whatsapp/inbound</code></li>
+        </ol>
+        <div class="btn-row">
+          <button class="btn btn-green" onclick="markDone(5)">✓ Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="step" id="s6">
+    <div class="step-dot pending" onclick="markDone(6)">6</div>
+    <div class="step-content">
+      <div class="step-header" onclick="markDone(6)">
+        <span class="step-title">🧪 Test Everything is Working</span>
+        <span class="step-time">~5 min</span>
+      </div>
+      <div class="step-body">
+        <p>Run these quick tests to verify the agent is live and working:</p>
+
+        <p style="margin-top:8px"><strong>1. Health check:</strong></p>
+        <div class="cmd" onclick="copyCmd(this)">curl https://YOUR-URL.railway.app/health</div>
+        <p>Should return: <code style="color:#4ade80">{"status":"ok"}</code></p>
+
+        <p style="margin-top:12px"><strong>2. Test the AI brain (chat):</strong></p>
+        <div class="cmd" onclick="copyCmd(this)">curl -X POST https://YOUR-URL.railway.app/trigger/test-chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hi, who is this?"}'</div>
+
+        <p style="margin-top:12px"><strong>3. Test a real call to YOUR phone first:</strong></p>
+        <div class="cmd" onclick="copyCmd(this)">curl -X POST https://YOUR-URL.railway.app/trigger/test-call \
+  -H "Content-Type: application/json" \
+  -d '{"phone": "+91XXXXXXXXXX", "name": "Test"}'</div>
+
+        <div class="tip">💡 Call yourself first! Hear how the AI sounds, tweak the script in module2 if needed.</div>
+        <div class="btn-row">
+          <button class="btn btn-green" onclick="markDone(6)">✓ All Tests Pass</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 7 -->
+  <div class="step" id="s7">
+    <div class="step-dot pending" onclick="markDone(7)">7</div>
+    <div class="step-content">
+      <div class="step-header" onclick="markDone(7)">
+        <span class="step-title">🎯 Add First Real Leads + Go Live!</span>
+        <span class="step-time">~5 min</span>
+      </div>
+      <div class="step-body">
+        <p>Two ways to add leads and start the agent:</p>
+
+        <p style="margin-top:8px"><strong>Option A — Add a lead manually (to test with 1 real prospect):</strong></p>
+        <div class="cmd" onclick="copyCmd(this)">curl -X POST https://YOUR-URL.railway.app/leads/add \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Rahul Mehta",
+    "phone": "+919876543210",
+    "email": "rahul@store.in",
+    "website": "https://rahulstore.in",
+    "city": "Mumbai",
+    "pain_points": ["low traffic", "bad SEO"]
+  }'</div>
+
+        <p style="margin-top:12px"><strong>Option B — Run the full lead sourcing pipeline:</strong></p>
+        <div class="cmd" onclick="copyCmd(this)">curl -X POST https://YOUR-URL.railway.app/trigger/source-leads</div>
+        <p>This scrapes Google Maps + Apollo for 100+ e-commerce leads automatically.</p>
+
+        <p style="margin-top:12px"><strong>Then trigger outreach:</strong></p>
+        <div class="cmd" onclick="copyCmd(this)">curl -X POST https://YOUR-URL.railway.app/trigger/new-leads</div>
+
+        <div class="tip">🎉 After this — the agent runs on autopilot. It calls leads, follows up on Day 2/5/10, sends quotes, and closes deals. Check HubSpot for pipeline updates!</div>
+        <div class="btn-row">
+          <button class="btn btn-green" onclick="markDone(7)">🚀 WE'RE LIVE!</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const total = 7;
+let done = 0;
+
+function markDone(n) {
+  const step = document.getElementById('s' + n);
+  const dot  = step.querySelector('.step-dot');
+  const content = step.querySelector('.step-content');
+
+  if (dot.classList.contains('done')) {
+    dot.classList.remove('done');
+    dot.classList.add('pending');
+    content.classList.remove('done');
+    done = Math.max(0, done - 1);
+  } else {
+    dot.classList.remove('pending', 'active');
+    dot.classList.add('done');
+    dot.textContent = '✓';
+    content.classList.remove('active');
+    content.classList.add('done');
+    done++;
+
+    // Activate next
+    const next = document.getElementById('s' + (n + 1));
+    if (next) {
+      next.querySelector('.step-dot').classList.remove('pending');
+      next.querySelector('.step-dot').classList.add('active');
+      next.querySelector('.step-content').classList.add('active');
+    }
+  }
+
+  updateProgress();
+}
+
+function updateProgress() {
+  const pct = Math.round((done / total) * 100);
+  document.getElementById('prog').style.width = pct + '%';
+  document.getElementById('progTxt').textContent = `Step ${done} of ${total} complete — ${pct}%`;
+  if (done === total) {
+    document.getElementById('doneBanner').style.display = 'block';
+    document.getElementById('doneBanner').scrollIntoView({ behavior: 'smooth' });
+  } else {
+    document.getElementById('doneBanner').style.display = 'none';
+  }
+}
+
+function copyCmd(el) {
+  const text = el.textContent.replace('📋 copy', '').replace('✅ copied!', '').trim();
+  navigator.clipboard.writeText(text).then(() => {
+    el.classList.add('copied');
+    setTimeout(() => el.classList.remove('copied'), 2000);
+  });
+}
+</script>
+</body>
+</html>
